@@ -18,6 +18,18 @@ class Player:
             self.ai = False
 
 
+class Node(object):
+    def __init__(self,parent=None):
+
+        self.children = []
+        self.parent = parent
+
+
+    def add_child(self, obj):
+        self.children.append(obj)
+
+
+
 def update_gui_from_matrix():
     global board
     global root
