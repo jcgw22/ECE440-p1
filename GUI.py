@@ -18,15 +18,31 @@ class Player:
             self.ai = False
 
 
-def on_click(i,j,event):
+def update_gui_from_matrix():
+    global board
+    global root
+    for i, row in enumerate(board):
+        for j, column in enumerate(row):
+            # relief adds an edge to the button so you can see individual squares
+            if board[i,j]==1:
+                L = tk.Label(root, text='     ', bg='white', relief='sunken')
+                L.grid(row=i, column=j)
+            elif board[i, j] == -1:
+                L = tk.Label(root, text='     ', bg='black', relief='sunken')
+                L.grid(row=i, column=j)
+
+
+def do_update_gui_and_turn(i,j,event= None):
     global counter
     global curr_p
     curr_p = p1 if counter%2 else p2
-    event.widget.config(bg=curr_p.color)
     board[i][j] = curr_p.piece
     counter += 1
-    if counter == 64:
-        print('Winner')
+    update_gui_from_matrix()
+
+
+def on_click(i,j,event):
+    do_update_gui_and_turn(i, j, event)
 
 
 # Main Program Setup
@@ -50,13 +66,11 @@ root = tk.Tk()
 for i, row in enumerate(board):
     for j, column in enumerate(row):
         # relief adds an edge to the button so you can see individual squares
-        if (i==3 and j==3) or (i==4 and j==4):
-            L = tk.Label(root, text='     ', bg='white', relief='sunken')
-        elif (i==3 and j==4) or (i == 4 and j == 3):
-            L = tk.Label(root, text='     ', bg='black', relief='sunken')
-        else:
-            L = tk.Label(root,text='     ',bg='green',relief='sunken')
+        L = tk.Label(root,text='     ',bg='green',relief='sunken')
         L.grid(row=i,column=j)
         # makes GUI change when clicked
         L.bind('<Button-1>',lambda e,i=i,j=j: on_click(i,j,e))
+
+update_gui_from_matrix()
+
 root.mainloop()
