@@ -28,15 +28,16 @@ Assume that the readers of your paper know in general as much as you do, but the
 
 Consider an organization like this for the paper:
 
-Abstract
-Introduction
-The game
-Design choices and features of the program
-Static evaluation function and game-tree search
-Using the program
-The program's performance
-Conclusion
-References
+* Abstract
+* Introduction
+* The game
+* Design choices and features of the program
+* Static evaluation function and game-tree search
+* Using the program
+* The program's performance
+* Conclusion
+* References
+
 The abstract and the paper itself should be independent; neither can depend on material introduced in the other. (HINT: Write the abstract last.)
 
 Be careful not to use any of the language in this posting or in any of your references, and to list all your references, including those found on the web. Print sources are in general more credible than material found on the web. If a paper is available both in print and on line, list its print reference, unless the on-line version is presented as definitive (Some journals do this).
