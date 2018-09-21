@@ -1,9 +1,9 @@
 # ECE440-p1
 
-##INTRODUCTION
+## INTRODUCTION
 Games of strategy in which two players alternate moves constitute an important area of Artificial Intelligence. Such games enlist a range of cognitive abilities, are well-defined and so amenable to computation, and yet are complicated enough to be challenging. Because games are competitive, game-playing programs allow direct comparisons of human and machine abilities.
 
-##DESCRIPTION
+## DESCRIPTION
 Write a program that plays the game Othello (also called Reversi) against a human opponent and document the program in a paper (described below). All the programs will compete in a tournament to be held shortly after the due date.
 
 Your program will play Othello interactively against a human opponent, with either the program or the opponent playing first. It will, after each move, display the current state of the game board, and it will employ a static evaluation function (SEF) to evaluate board configurations.
@@ -15,7 +15,7 @@ Displaying the game board and interacting with the opponent;
 Evaluating board configurations: the static evaluation function; and
 Organizing the search of the game tree on which move selection is based.
 
-##WHAT TO HAND IN
+## WHAT TO HAND IN
 A progress report will describe the state of your program at the time the report is due. In particular, you should be able to report the language in which the program will be written and the program's major design features and overall structure. This report should be word-processed and no more than one page long.
 
 `Due on October 12 is a paper that describes the motivation, design, and performance of the program. Do not hand in code.`
