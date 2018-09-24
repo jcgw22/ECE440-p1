@@ -6,8 +6,12 @@ class Player:
     # in common for all players
     playerCount = 0
 
-    def __init__(self):
+    def __init__(self, is_AI):
         Player.playerCount += 1
+        if is_AI:
+            self.ai = True
+        else:
+            self.ai = False
         if Player.playerCount == 1:
             self.color = 'white'
             self.piece = 1
@@ -27,6 +31,24 @@ class Node(object):
     def add_child(self, obj):
         self.children.append(obj)
 
+
+def initial_board_setup():
+    """ Sets up initial board / GUI """
+    for j, row in enumerate(board):
+        for i, column in enumerate(row):
+            # relief adds an edge to the button so you can see individual squares
+            L = tk.Label(root, text='     ', bg='green', relief='sunken')
+            L.grid(row=j, column=i)
+            # makes GUI change when clicked
+            L.bind('<Button-1>', lambda e, j=j, i=i: on_click(j, i, e))
+
+    # Setup of initial 4 central squares
+    board[3, 3] = p1.piece
+    board[4, 4] = p1.piece
+    board[3, 4] = p2.piece
+    board[4, 3] = p2.piece
+
+    update_gui_from_matrix()
 
 # Idea: take board as an input so tree nodes can contain parent boards
 def update_gui_from_matrix():
@@ -114,34 +136,12 @@ def on_click(j, i, event):
 board = np.zeros((8, 8))
 board.astype(dtype=np.int8)  # Note: holds numbers -127 to 128
 counter = 1
-p1 = Player()
-p2 = Player()
+p1 = Player(False)
+p2 = Player(False)
 curr_p = p1
 moves = {}
 
-# Tree node may store any of the following:
-# board
-# last_move
-# score
-
 # Main Program Board/GUI Setup
-
-# Setup of initial 4 squares
-board[3, 3] = p1.piece
-board[4, 4] = p1.piece
-board[3, 4] = p2.piece
-board[4, 3] = p2.piece
-
-# Sets up initial GUI. It is an array of buttons.
 root = tk.Tk()
-for j, row in enumerate(board):
-    for i, column in enumerate(row):
-        # relief adds an edge to the button so you can see individual squares
-        L = tk.Label(root, text='     ',bg='green',relief='sunken')
-        L.grid(row=j, column=i)
-        # makes GUI change when clicked
-        L.bind('<Button-1>',lambda e, j=j, i=i: on_click(j, i, e))
-
-update_gui_from_matrix()
-
+initial_board_setup()
 root.mainloop()
