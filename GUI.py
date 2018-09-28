@@ -1,18 +1,19 @@
 import tkinter as tk
 import numpy as np
 import datetime as dt
+from typing import Any
 
 
 class Player:
     # in common for all players
     playerCount = 0
 
-    def __init__(self, is_ai):
+    def __init__(self, p_name, is_ai):
         Player.playerCount += 1
-        if is_ai:
-            self.ai = True
-        else:
-            self.ai = False
+        self.piece_count = 2
+        self.ai = is_ai
+        self.p_name = p_name
+
         if Player.playerCount == 1:
             self.color = 'white'
             self.piece = 1
@@ -65,13 +66,16 @@ def update_gui_from_matrix():
 
 
 def do_update_gui_and_turn(j, i, event=None):
-    global counter
+    global pieces_left
     global curr_p
     board[j][i] = curr_p.piece
     update_gui_from_matrix()
     # Have to change player after update
-    counter += 1
-    curr_p = p1 if counter % 2 else p2
+    pieces_left -= 1
+    curr_p = p2 if pieces_left % 2 else p1
+    # Check if game is finished
+    if pieces_left == 0:
+        find_winner()
 
 
 def do_ai_move():
@@ -80,24 +84,24 @@ def do_ai_move():
     find_moves()
 
     # Gets the winner if no moves left
-    if not moves_b:
+    if not moves:
         find_winner()
+        return
 
-    j, i = moves_b[0]
+    j, i = moves[0]
     make_move(j, i)
     do_update_gui_and_turn(j, i, event=None)
 
 
 def find_winner():
-    print(board)
-    total = board.sum()
-    if total > 0:
-        print("Player 1 won")
-    elif total < 0:
-        print("Player 2 won")
+    if p1.piece_count > p2.piece_count:
+        print(p1.p_name, " won")
+    elif p2.piece_count > p1.piece_count:
+        print(p2.p_name, " won")
     else:
         print("It was a tie")
-    exit()
+    print(p1.p_name, " ", p1.color, ": ", p1.piece_count)
+    print(p2.p_name, " ", p2.color, ": ", p2.piece_count)
 
 
 def make_move(j, i):
@@ -124,6 +128,17 @@ def make_move(j, i):
         return False
 
     # Otherwise flip all flippable
+
+    # First update piece count
+    diff = len(flippable)
+
+    if pieces_left % 2:
+        p1.piece_count += diff + 1
+        p2.piece_count -= diff
+    else:
+        p2.piece_count += diff + 1
+        p1.piece_count -= diff
+
     for fl in flippable:
         board[fl[0], fl[1]] = board[fl[0], fl[1]]*-1
     return True
@@ -152,48 +167,45 @@ def find_flips(my_color, y, x, dy, dx, flippable):
 def on_click(j, i, event):
     """This advances the game by 1 turn. It ignores the click position for the ai game"""
 
-    # Do ai move and ignore click position for an ai
-    if curr_p.ai:
-        do_ai_move()
-        return
+    # Do ai move and ignore click position for an ai. This doesn't happen if curr player isn't an ai
+    do_ai_move()
 
     valid = make_move(j, i)
     if valid:
         # Do the human players move
         do_update_gui_and_turn(j, i, event)
+        do_ai_move()
     else:
         find_moves()
-        if not moves_b:
+        if not moves:
             find_winner()
-        else:
-            print(moves_b[0])
-
-    if counter > 64:
-        find_winner()
 
 
 def find_moves():
     global moves_b
-    global moves_f
+    global moves_m
+    global moves
 
     moves_b = []
-    moves_f = []
+    moves_m = []
 
-# ignore the datetime. I'm not using the values currently.
-    a1 = dt.datetime.now()
-    for i in range(10):
-        find_moves_blank()
-    b1 = dt.datetime.now()
-    c1 = b1-a1
-
+## ignore the datetime. I'm not using the values currently.
+#    a1 = dt.datetime.now()
+#    for i in range(100):
+#        find_moves_blank()
+#    b1 = dt.datetime.now()
+#    c1 = b1-a1
+#
 #    a2 = dt.datetime.now()
-#    for i in range(10):
+#    for i in range(100):
 #        find_moves_me()
 #    b2 = dt.datetime.now()
 #    c2 = b2-a2
 #
-#    print(counter, " blank: ", c1, " foe: ", c2, " diff b-f ", c1-c2)
+#    print(pieces_left, " B: ", c1, " | ", curr_p.piece_count, " Me: ", c2, " diff b-f ", c1-c2, "B-Me ", pieces_left-curr_p.piece_count)
 
+    find_moves_me()
+    moves = moves_m
 
 def find_moves_blank_dir(my_color, y, x, dy, dx):
     """Tries to find moves in 1 direction if given a blank tile"""
@@ -258,14 +270,70 @@ def find_moves_blank():
                 moves_b.append((ys[index], xs[index]))
 
 
+def find_moves_me_dir(me, y, x, dy, dx, moves_matrix):
+    """Tries to find moves in 1 direction if given a blank tile"""
+    y += dy
+    x += dx
+
+    # Makes sure the first piece seen in the opponent's piece
+    if not (0 <= y <= 7 and 0 <= x <= 7 and board[y, x] == me*-1):
+        return
+    y += dy
+    x += dx
+
+    while 0 <= y <= 7 and 0 <= x <= 7:
+        # return if no piece in that direction
+        if board[y, x] == me:
+            return
+
+        # When it sees its own piece, return true as it found it's opponents piece earlier
+        if board[y, x] == 0:
+            moves_matrix[y,x] = 1
+            return
+
+        # The last option is an opponent's piece. Continue.
+        y += dy
+        x += dx
+    return False
+
+
+def find_moves_me():
+    global moves_m
+    moves_matrix = np.zeros((8, 8), dtype=np.int8)  # Note: holds numbers -127 to 128
+    me = curr_p.piece
+
+    # Allows to only go through the board for each blank tile
+    me_tiles = np.where(board == me)
+    ys = me_tiles[0]
+    xs = me_tiles[1]
+
+    # For each tile, check each direction for a valid move
+    # Needs to check all directions. A matrix is used since could be from multiple directions
+    for index in range(ys.size):
+            find_moves_me_dir(me, ys[index], xs[index], 1, 0, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], -1, 0, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], 0, 1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], 0, -1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], 1, 1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], -1, -1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], 1, -1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], -1, 1, moves_matrix)
+
+    moves_temp = np.where(moves_matrix)
+    ys = moves_temp[0]
+    xs = moves_temp[1]
+    for index in range(ys.size):
+        moves_m.append((ys[index], xs[index]))
+
 # Main Program Setup
 board = np.zeros((8, 8), dtype=np.int8)  # Note: holds numbers -127 to 128
-counter = 1
-p1 = Player(False)
-p2 = Player(True)
+pieces_left = 60
+p1 = Player("p1", False)
+p2 = Player("p2", True)
 curr_p = p1
 moves_b = []
-moves_f = []
+moves_m = []
+moves = []
 
 # Main Program Board/GUI Setup
 root = tk.Tk()
