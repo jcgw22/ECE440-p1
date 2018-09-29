@@ -5,11 +5,19 @@ from typing import Any
 
 
 class Player:
-    # in common for all players
+    """
+    Keeps track of player name, piece count, piece value (1 or -1) and color
+    Attributes:
+        count of players
+    """
     playerCount = 0
 
     def __init__(self, p_name, is_ai):
         Player.playerCount += 1
+
+        if Player.playerCount > 2:
+            raise ValueError('Only 2 players can play')
+
         self.piece_count = 2
         self.ai = is_ai
         self.p_name = p_name
@@ -33,7 +41,10 @@ class Node(object):
 
 
 def initial_board_setup():
-    """ Sets up initial board / GUI """
+    """
+    Sets up initial board / GUI
+    This includes adding the four initial pieces
+    """
     for j, row in enumerate(board):
         for i, column in enumerate(row):
             # relief adds an edge to the button so you can see individual squares
@@ -52,6 +63,9 @@ def initial_board_setup():
 
 
 def update_gui_from_matrix():
+    """
+    Makes the gui accurately reflect the board matrix
+    """
     global board
     global root
     for j, row in enumerate(board):
@@ -65,10 +79,15 @@ def update_gui_from_matrix():
                 label.grid(row=j, column=i)
 
 
-def do_update_gui_and_turn(j, i, event=None):
+def update_gui_and_ply():
+    """
+    Updates the gui using the update_gui_from_matrix method.
+    Decrement the pieces left.
+    Change the current player.
+    If there are no more pieces left, call the find winner method.
+    """
     global pieces_left
     global curr_p
-    board[j][i] = curr_p.piece
     update_gui_from_matrix()
     # Have to change player after update
     pieces_left -= 1
@@ -78,22 +97,35 @@ def do_update_gui_and_turn(j, i, event=None):
         find_winner()
 
 
-def do_ai_move():
+def ai_move():
+    """
+    Exits if current player is not an ai.
+    Otherwise, finds all possible moves.
+    Picks the first move on the list. This should be changed to a minimax selection.
+    Makes the move.
+    Updates the gui and ends the turn.
+    """
+    # Checks if the current player is an ai. If not, exits the method.
     if not curr_p.ai:
         return
     find_moves()
 
-    # Gets the winner if no moves left
+    # Gets the winner if no moves are found aka game is over.
     if not moves:
         find_winner()
         return
 
+    # Set the move to the first in the list. (Later use minimax here).
     j, i = moves[0]
     make_move(j, i)
-    do_update_gui_and_turn(j, i, event=None)
+    update_gui_and_ply()
 
 
 def find_winner():
+    """
+    Compares piece count for both players.
+    Prints result.
+    """
     if p1.piece_count > p2.piece_count:
         print(p1.p_name, " won")
     elif p2.piece_count > p1.piece_count:
@@ -105,8 +137,21 @@ def find_winner():
 
 
 def make_move(j, i):
+    """
+    Attempts to add a piece for the current player in the spot specified.
+    This requires that for 1 of 8 possible directions
+        1. Current spot is empty
+        2. 1-6 concurrent spots contain enemy piece(s)
+        3. The next piece belongs to the current player.
+    TODO add more comments. I'm changing the method to avoid appending lists as that seems so be 4x slower.
+    :param j: y position of the placed piece.
+    :param i: x position of the placed piece.
+    :return: True if move can be made. False if an invalid move.
+    """
     global board
 
+    # Checks that the spot selected does not already have a piece.
+    # If it does, immediately return false.
     if board[j, i] != 0:
         return False
 
@@ -127,11 +172,10 @@ def make_move(j, i):
     if not flippable:
         return False
 
-    # Otherwise flip all flippable
-
-    # First update piece count
+    # First update piece count.
+    # The current player steals a number of pieces aka length of flippable
+    # The current player also plays 1 additional piece
     diff = len(flippable)
-
     if pieces_left % 2:
         p1.piece_count += diff + 1
         p2.piece_count -= diff
@@ -139,13 +183,19 @@ def make_move(j, i):
         p2.piece_count += diff + 1
         p1.piece_count -= diff
 
+    # Then actually flip the pieces.
     for fl in flippable:
         board[fl[0], fl[1]] = board[fl[0], fl[1]]*-1
+    # add the new piece to the board
+    board[j][i] = me
     return True
 
 
 def find_flips(my_color, y, x, dy, dx, flippable):
-    """ Will add any flippable cells to flippable"""
+    """
+    Will add any flippable cells to flippable
+    TODO: modify to matrix, not list.
+    """
     new_flip = []
     y += dy
     x += dx
@@ -165,23 +215,46 @@ def find_flips(my_color, y, x, dy, dx, flippable):
 
 
 def on_click(j, i, event):
-    """This advances the game by 1 turn. It ignores the click position for the ai game"""
+    """
+    Clicking will
+    1. Have the ai move if it is the current player.
+    2. If the player's turn attempt to place a piece in the spot clicked.
+        If valid
+            update gui and advance ply (aka the other player is now the current player)
+            have ai move if it is now the current player.
+        Else
+            find all possible moves
+            If no moves available
+                find winner of game
+            Else
+                exit method to wait for next click
+    """
 
     # Do ai move and ignore click position for an ai. This doesn't happen if curr player isn't an ai
-    do_ai_move()
-
+    ai_move()
+    # Do the human player's move if it is allowed.
+    # valid is set to true if a move was made
     valid = make_move(j, i)
     if valid:
-        # Do the human players move
-        do_update_gui_and_turn(j, i, event)
-        do_ai_move()
+        # Update GUI and advance ply
+        update_gui_and_ply()
+        # AI attempts to make a move.
+        ai_move()
     else:
+        # Finds all moves. If there are no possible moves, the game is over.
         find_moves()
         if not moves:
             find_winner()
 
 
 def find_moves():
+    """
+    A move will go [Blank] [Foe]*(1-6) [My Piece] in any of 8 directions.
+    It is possible to start searching from either end.
+        aka check all blank squares or check all of the current pieces.
+    There are two separate methods used depending on a comparison of the
+    number of blank (empty) spots and the number of pieces owned by the current player.
+    """
     global moves_b
     global moves_m
     global moves
@@ -189,7 +262,7 @@ def find_moves():
     moves_b = []
     moves_m = []
 
-## ignore the datetime. I'm not using the values currently.
+# ignore the datetime. I'm not using the values currently.
 #    a1 = dt.datetime.now()
 #    for i in range(100):
 #        find_moves_blank()
@@ -206,6 +279,7 @@ def find_moves():
 
     find_moves_me()
     moves = moves_m
+
 
 def find_moves_blank_dir(my_color, y, x, dy, dx):
     """Tries to find moves in 1 direction if given a blank tile"""
@@ -270,8 +344,51 @@ def find_moves_blank():
                 moves_b.append((ys[index], xs[index]))
 
 
+def find_moves_me():
+    """
+    Finds all possible moves by checking all pieces owned by current player
+    """
+    global moves_m
+    moves_matrix = np.zeros((8, 8), dtype=np.int8)  # Empty matrix that will hold available move locations
+    me = curr_p.piece
+
+    # Allows to only go through the board for each blank tile
+    me_tiles = np.where(board == me)  # Which tiles are mine
+    ys = me_tiles[0]
+    xs = me_tiles[1]
+
+    # For each tile, check each direction for a valid move
+    # Needs to check all directions. A matrix is used since could be from multiple directions
+    for index in range(ys.size):
+            find_moves_me_dir(me, ys[index], xs[index], 1, 0, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], -1, 0, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], 0, 1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], 0, -1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], 1, 1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], -1, -1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], 1, -1, moves_matrix)
+            find_moves_me_dir(me, ys[index], xs[index], -1, 1, moves_matrix)
+
+    # Change to a format readable by move method.
+    moves_temp = np.where(moves_matrix)
+    ys = moves_temp[0]
+    xs = moves_temp[1]
+    for index in range(ys.size):
+        moves_m.append((ys[index], xs[index]))
+
+
 def find_moves_me_dir(me, y, x, dy, dx, moves_matrix):
-    """Tries to find moves in 1 direction if given a blank tile"""
+    """
+    Find move going in dy,dx direction from the given y,x position
+        assumes given a y,x location belonging to the current player's piece
+    :param me: number -1 or 1 of current player
+    :param y: y coordinates of the end piece
+    :param x: x coordinate of the end piece
+    :param dy: change in y coordinates
+    :param dx: change in x coordinates
+    :param moves_matrix: will place a 1 in if it is a potential move
+    :return:
+    """
     y += dy
     x += dx
 
@@ -297,39 +414,12 @@ def find_moves_me_dir(me, y, x, dy, dx, moves_matrix):
     return False
 
 
-def find_moves_me():
-    global moves_m
-    moves_matrix = np.zeros((8, 8), dtype=np.int8)  # Note: holds numbers -127 to 128
-    me = curr_p.piece
-
-    # Allows to only go through the board for each blank tile
-    me_tiles = np.where(board == me)
-    ys = me_tiles[0]
-    xs = me_tiles[1]
-
-    # For each tile, check each direction for a valid move
-    # Needs to check all directions. A matrix is used since could be from multiple directions
-    for index in range(ys.size):
-            find_moves_me_dir(me, ys[index], xs[index], 1, 0, moves_matrix)
-            find_moves_me_dir(me, ys[index], xs[index], -1, 0, moves_matrix)
-            find_moves_me_dir(me, ys[index], xs[index], 0, 1, moves_matrix)
-            find_moves_me_dir(me, ys[index], xs[index], 0, -1, moves_matrix)
-            find_moves_me_dir(me, ys[index], xs[index], 1, 1, moves_matrix)
-            find_moves_me_dir(me, ys[index], xs[index], -1, -1, moves_matrix)
-            find_moves_me_dir(me, ys[index], xs[index], 1, -1, moves_matrix)
-            find_moves_me_dir(me, ys[index], xs[index], -1, 1, moves_matrix)
-
-    moves_temp = np.where(moves_matrix)
-    ys = moves_temp[0]
-    xs = moves_temp[1]
-    for index in range(ys.size):
-        moves_m.append((ys[index], xs[index]))
-
 # Main Program Setup
 board = np.zeros((8, 8), dtype=np.int8)  # Note: holds numbers -127 to 128
 pieces_left = 60
 p1 = Player("p1", False)
 p2 = Player("p2", True)
+
 curr_p = p1
 moves_b = []
 moves_m = []
