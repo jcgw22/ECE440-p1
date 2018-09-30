@@ -1,7 +1,5 @@
 import tkinter as tk
 import numpy as np
-import datetime as dt
-from typing import Any
 
 
 class Player:
@@ -255,27 +253,17 @@ def find_moves():
         aka check all blank squares or check all of the current pieces.
     There are two possible methods used depending on a comparison of the
     number of blank (empty) spots and the number of pieces owned by the current player.
-    For some reason starting with the current player is much, much faster so will be used.
-    I can't figure out why. (move_me not move_b)
     """
     global moves
 
-#   # Used for time comparison of both methods
-#   a1 = dt.datetime.now()
-#   for i in range(100):
-#       find_moves_blank()
-#   b1 = dt.datetime.now()
-#   c1 = b1-a1#
-#   a2 = dt.datetime.now()
-#   for i in range(100):
-#       find_moves_me()
-#   b2 = dt.datetime.now()
-#   c2 = b2-a2
-#
-#    print(pieces_left, " B: ", c1, " | ", curr_p.piece_count, " Me: ", c2, " diff b-f ", c1-c2, "B-Me ", pieces_left-curr_p.piece_count)
-
-    find_moves_me()
-    moves = moves_m
+    # pieces_left = number of blank pieces.
+    # want to do the minimum amount of work so in this case check all blanks.
+    if pieces_left<curr_p.piece_count:
+        find_moves_blank()
+        moves = moves_b
+    else:
+        find_moves_me()
+        moves = moves_m
 
 
 def find_moves_blank():
@@ -291,57 +279,42 @@ def find_moves_blank():
     # For each tile, check each direction until it finds a valid move.
     # If 1 valid move, there is no need to keep checking
     for index in range(ys.size):
-            if find_moves_blank_dir(me, ys[index], xs[index], 1, 0):
-                moves_matrix[ys[index], xs[index]] = 1
-                continue
-            if find_moves_blank_dir(me, ys[index], xs[index], -1, 0):
-                moves_matrix[ys[index], xs[index]] = 1
-                continue
-            if find_moves_blank_dir(me, ys[index], xs[index], 0, 1):
-                moves_matrix[ys[index], xs[index]] = 1
-                continue
-            if find_moves_blank_dir(me, ys[index], xs[index], 0, -1):
-                moves_matrix[ys[index], xs[index]] = 1
-                continue
-            if find_moves_blank_dir(me, ys[index], xs[index], 1, 1):
-                moves_matrix[ys[index], xs[index]] = 1
-                continue
-            if find_moves_blank_dir(me, ys[index], xs[index], -1, -1):
-                moves_matrix[ys[index], xs[index]] = 1
-                continue
-            if find_moves_blank_dir(me, ys[index], xs[index], 1, -1):
-                moves_matrix[ys[index], xs[index]] = 1
-                continue
-            if find_moves_blank_dir(me, ys[index], xs[index], -1, 1):
-                moves_matrix[ys[index], xs[index]] = 1
+            find_moves_blank_dir(me, ys[index], xs[index], 1, 0, moves_matrix)
+            find_moves_blank_dir(me, ys[index], xs[index], -1, 0, moves_matrix)
+            find_moves_blank_dir(me, ys[index], xs[index], 0, 1, moves_matrix)
+            find_moves_blank_dir(me, ys[index], xs[index], 0, -1, moves_matrix)
+            find_moves_blank_dir(me, ys[index], xs[index], 1, 1, moves_matrix)
+            find_moves_blank_dir(me, ys[index], xs[index], -1, -1, moves_matrix)
+            find_moves_blank_dir(me, ys[index], xs[index], 1, -1, moves_matrix)
+            find_moves_blank_dir(me, ys[index], xs[index], -1, 1, moves_matrix)
 
     # Change to a format readable by move method.
     moves_b = np.where(moves_matrix)
 
-def find_moves_blank_dir(my_color, y, x, dy, dx):
+
+def find_moves_blank_dir(my_color, j, i, dy, dx, moves_matrix):
     """Tries to find moves in 1 direction if given a blank tile"""
-    y += dy
-    x += dx
+    y = dy + j
+    x = dx + i
 
     # Makes sure the first piece seen in the opponent's piece
     if not (0 <= y <= 7 and 0 <= x <= 7 and board[y, x] == my_color*-1):
-        return False
+        return
     y += dy
     x += dx
 
     while 0 <= y <= 7 and 0 <= x <= 7:
         # return if no piece in that direction
         if board[y, x] == 0:
-            return False
-
-        # When it sees its own piece, return true as it found it's opponents piece earlier
+            return
+        # When it sees its own piece, add spot to matrix
         if board[y, x] == my_color:
-            return True
+            moves_matrix[j][i]=1
+            return
 
         # The last option is an opponent's piece. Continue.
         y += dy
         x += dx
-    return False
 
 
 def find_moves_me():
