@@ -29,10 +29,15 @@ class Player:
 
 
 class Node(object):
-    def __init__(self, parent=None):
+    winning = 0 #p1 white= -1 and p2 black= 1
+    alpha =0
+    beta =0
+
+    def __init__(self, Board = np.zeros((8, 8), dtype=np.int8), parent=None  ):
 
         self.children = []
         self.parent = parent
+        self.Board = Board
 
     def add_child(self, obj):
         self.children.append(obj)
@@ -107,14 +112,12 @@ def ai_move():
     if not curr_p.ai:
         return
 
-    find_moves()
-    ys = moves[0]
-    xs = moves[1]
-
-    # Gets the winner if no moves are found aka game is over.
-    if not len(ys):
+    if not find_moves():
         find_winner()
         return
+
+    ys = moves[0]
+    xs = moves[1]
 
     # Set the move to the first in the list. (Later use minimax here).
     j, i = ys[0],xs[0]
@@ -127,7 +130,7 @@ def find_winner():
     Compares piece count for both players.
     Prints result.
     """
-    if p1.piece_count > p2.piece_count:
+    if p1.piece_count < p2.piece_count:
         print(p1.p_name, " won")
     elif p2.piece_count > p1.piece_count:
         print(p2.p_name, " won")
@@ -241,8 +244,7 @@ def on_click(j, i, event):
         ai_move()
     else:
         # Finds all moves. If there are no possible moves, the game is over.
-        find_moves()
-        if not moves:
+        if not find_moves():
             find_winner()
 
 
@@ -264,6 +266,10 @@ def find_moves():
     else:
         find_moves_me()
         moves = moves_m
+
+    if len(moves[0])== 0:
+        return False
+    return True
 
 
 def find_moves_blank():
@@ -381,6 +387,23 @@ def find_moves_me_dir(me, y, x, dy, dx, moves_matrix):
         y += dy
         x += dx
     return False
+
+
+def min_aplha_beta(board,alpha,beta,level,depth):
+    if level == depth:
+        return Static_evaluation_function(board)
+
+
+
+def max_aplha_beta(board,alpha,beta,level,depth):
+    if level == depth:
+        return Static_evaluation_function(board)
+
+
+def Static_evaluation_function(board):
+    """
+    static evaluation function
+    """
 
 
 # Main Program Setup
