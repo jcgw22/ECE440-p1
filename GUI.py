@@ -299,18 +299,27 @@ def make_move_dir(y, x, dy, dx, flippable, player_int, curr_board):
         x += dx
 
 
-def find_winner(curr_board):
+def find_winner(curr_board, AI_int):
     """
-    Compares piece count for both players.
-    Return: -1 if Black Won, 0 if Tie, 1 if white won
+    :param curr_board: the board checking to see who is winner on
+    :param AI_int:
+    :return: 5 if the AI won, -5 if the AI did not win, 0 for a draw
     """
 
+    # Find the winner
     result = sum(curr_board)
     if result<1:
-        return -1
+        winner = -1
     if result >1:
-        return 1
-    return 0
+        winner = 1
+
+    # Find if the winner is the AI
+    if AI_int == winner:
+        return 5
+    elif AI_int*-1 == winner:
+        return -5
+    else:
+        return 0
 
 
 def print_winner():
@@ -341,10 +350,63 @@ def max_alpha_beta(board,alpha,beta,level,depth):
         return Static_evaluation_function(board)
 
 
-def Static_evaluation_function(board):
+def Static_evaluation_function(AI_int, curr_board, pieces_left, curr_AI_turn):
     """
-    static evaluation function
+    :param curr_int: The integer value for the AI player aka player.int
+    :param curr_board:
+    :param pieces_left: basically the counter for this particular leaf. 64 pieces placed means 0 pieces_left
+    :param curr_AI_turn: a boolean. true if currently the AI's turn.
+    :return: a value between -1 and 1 if no winner. 5 or -5 if winner
+    Note: positive values are returned if the advantage is towards the AI. Otherwise negative.
+
+    SEF calculates based on
+        1. number of moves available for each side
+        2. number of pieces on each side
+        3. number of corners taken by each side
     """
+
+    # Note: different weights should be eventually given the three factors of the SEF
+    weight_moves = .4
+    weight_score = .4
+    weight_corners = .2
+
+    foe_int = AI_int * -1
+
+    # Get number of moves for each player
+    moves_AI = find_moves(AI_int, curr_board)
+    num_m_AI = np.size(moves_AI,0)
+
+    moves_foe = find_moves(foe_int, curr_board)
+    num_m_foe = np.size(moves_foe,0)
+
+    # Check if the game is over because the current player has no moves
+    if num_m_AI == 0 and curr_AI_turn:
+        return find_winner()
+    if num_m_foe == 0 and not curr_AI_turn:
+        return find_winner()
+
+
+    # normalize moves
+    moves_SEF =  (num_m_AI - num_m_foe)  / (num_m_AI + num_m_foe)
+
+    # get number of pieces for each player
+    score_AI = np.count_nonzero(board == AI_int)
+    score_foe = 64 - (pieces_left + score_AI)
+
+    score_SEF = ( score_AI - score_foe) / (score_AI + score_foe)
+
+    # Grab the corners of the board.
+    corner = np.matrix(curr_board[0][0], curr_board[0][7], curr_board[7][0], curr_board[7][7])
+    corner_AI = np.count_nonzero(corner == AI_int)
+    corner_foe = np.count_nonzero(corner == foe_int)
+
+    total_corner = corner_AI + corner_foe
+    if total_corner == 0:
+        corner_SEF = 0
+    else:
+        corner_SEF = (corner_AI - corner_foe)/total_corner
+
+    return moves_SEF * weight_moves + score_SEF * weight_score + corner_SEF * weight_corners
 
 
 # Main Program Setup
