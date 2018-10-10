@@ -1,5 +1,6 @@
 import tkinter as tk
 import numpy as np
+from copy import deepcopy
 
 
 class Player:
@@ -7,12 +8,17 @@ class Player:
     Keeps track of player name, piece count, piece value (1 or -1) and color
     Attributes:
         count of players
+    menbers
+        playerScore : the amount of pieses taken by the player
+        pieces_not_taken : empty slots on the board
+        ai: true if the player is an ai
+        color: the color of the player
+        int : 
     """
-    playerCount = 0
-
     def __init__(self, is_ai):
         Player.playerCount += 1
-
+        self.playerScore = 2
+        self.pieces_not_taken = 60
         if Player.playerCount > 2:
             raise ValueError('Only 2 players can play')
 
@@ -24,18 +30,40 @@ class Player:
         else:
             self.color = 'black'
             self.int = -1
+    
+    def update_score(self, board_to_check)
+        playerScore = np.count_nonzero(board_to_check == self.int)
+        
 
 
 class Node(object):
-    winning = 0 #p1 white= -1 and p2 black= 1
-    alpha =0
-    beta =0
-
-    def __init__(self, Board = np.zeros((8, 8), dtype=np.int8), parent=None  ):
-
+    """
+    Keeps track of all nessessary info for the tree
+    Menbers:
+        winning p1 white= -1 and p2 black= 1
+        alpha:
+        beta:
+        value:
+        children: array of all posible moves done by the player
+        parent :  parent node
+        Board : Board to do the moves
+        player: player of the moves 
+        j_move_cordinate: j cordinate of the move 
+        i_move_cordinate: i cordinate of the move 
+    """
+    # init function (self, player ,j=None, i=None, Board = None, parent=None  )
+    def __init__(self, player ,j=None, i=None, Board = np.zeros((8, 8), dtype=np.int8), parent=None  ):
+        self.winning = 0 #p1 white= -1 and p2 black= 1
+        self.alpha =0
+        self.beta =0
+        self.value=0
         self.children = []
         self.parent = parent
         self.Board = Board
+        self.player = player
+        self.j_move_cordinate = j
+        self.i_move_cordinate = i
+        
 
     def add_child(self, obj):
         self.children.append(obj)
@@ -92,6 +120,8 @@ def update_gui_and_ply():
     update_gui_from_matrix()
     # Have to change player after update
     pieces_left -= 1
+    p1.pieces_not_taken = pieces_left 
+    p2.pieces_not_taken = pieces_left 
     curr_p = p2 if pieces_left % 2 else p1
     # Check if game is finished
     if pieces_left == 0:
@@ -226,7 +256,7 @@ def find_moves_dir(y, x, dy, dx, moves_matrix, player_int, curr_board):
     return False
 
 
-def make_move(j, i, player_int, curr_board):
+def make_move(j, i, player_int, curr_board, Player_to_check = None):
     """
     Attempts to add a piece for the current player in the spot specified.
     This requires that for 1 of 8 possible directions
@@ -254,7 +284,7 @@ def make_move(j, i, player_int, curr_board):
     make_move_dir(j, i, 0, -1, flippable, player_int, curr_board)
     make_move_dir(j, i, 1, 1, flippable, player_int, curr_board)
     make_move_dir(j, i, -1, -1, flippable, player_int, curr_board)
-    make_move_dir(j, i, 1, -1, flippable, player_int, curr_board)
+    make_move_dir(j, i, 1, -1, flint, curr_board)
     make_move_dir(j, i, -1, 1, flippable, player_int, curr_board)
 
     # checks for an empty list
@@ -266,6 +296,11 @@ def make_move(j, i, player_int, curr_board):
         curr_board[fl[0], fl[1]] = board[fl[0], fl[1]]*-1
     # add the new piece to the board
     curr_board[j][i] = player_int
+    # update player score caount 
+    if not Player_to_check == None
+        Player_to_check.pieces_not_taken -= 1
+        Player_to_check.update_score(curr_board)
+
     return True
 
 
@@ -302,7 +337,7 @@ def make_move_dir(y, x, dy, dx, flippable, player_int, curr_board):
 def find_winner(curr_board, AI_int):
     """
     :param curr_board: the board checking to see who is winner on
-    :param AI_int:
+    :param AI_int: a boolean. true if currently the AI's turn.
     :return: 5 if the AI won, -5 if the AI did not win, 0 for a draw
     """
 
@@ -332,22 +367,70 @@ def print_winner():
     p2_score = 64 - (pieces_left + p1_score)
 
     if p1_score > p2_score:
-        print("White won: ", p1_score, " to ", p2_score)
+        prinppable, player_it("White won: ", p1_score, " to ", p2_score)
     elif p2_score > p1_score:
         print("Black won: ", p2_score, " to ", p1_score)
     else:
         print("It was a tie: ",  p2_score, " to ", p1_score)
 
 
-def min_alpha_beta(board,alpha,beta,level,depth):
+def min_alpha_beta(node,board,alpha,beta,level,depth):
     if level == depth:
-        return Static_evaluation_function(board)
+        return Static_evaluation_function(node.player.int, node.Board, node.pieces_not_taken, node.player.ai)
+    if abs( find_winner(node.Board, node.player.int)) == 5 # if someone won
+        return find_winner(node.Board, AI_int)
+    if find_winner(node.Board, node.player.int) == 0 # if is a drawn
+        return 0
+    #calculate all the poible moves by the opponenct and add them to the node
+    moves = find_moves(node.player.int, node.Board)
+    new_player = deepcopy(node.player)
+    new_player.ai=not new_player.ai
+    new_player.int = new_player.int * -1
+    for i in range(0, (moves.size/2)-1)
+        child = Node( new_player ,moves[i][0], moves[j][0], node.Board )
+        node.add_child( deepcopy(child) )
+    del moves
+    del child
+    del new player
+    ##################################################
+    for each_node in node.children:
+        make_move(each_node.j_move_cordinate, each_node.i_move_cordinate, each_node.player.int, each_node.Board, each_node.player)
+        node.value = max_alpha_beta(each_node,each_node.Board,each_node.alpha,each_node.beta,level,depth+1)
+        node.beta = min(node.value ,node.alpha)
+        if node.beta<=node.alpha:
+            return node.alpha
+    return node.beta
+
+    
 
 
 
-def max_alpha_beta(board,alpha,beta,level,depth):
+def max_alpha_beta(node,board,alpha,beta,level,depth):
     if level == depth:
-        return Static_evaluation_function(board)
+        return Static_evaluation_function(node.player.int, node.Board, node.pieces_not_taken, node.player.ai)
+    if abs( find_winner(node.Board, node.player.int)) == 5 # if someone won
+        return find_winner(node.Board, AI_int)
+    if find_winner(node.Board, node.player.int) == 0 # if is a drawn
+        return 0
+    #calculate all the poible moves by the opponenct and add them to the node
+    moves = find_moves(node.player.int, node.Board)
+    new_player = deepcopy(node.player)
+    new_player.ai=not new_player.ai
+    new_player.int = new_player.int * -1
+    for i in range(0, (moves.size/2)-1)
+        child = Node( new_player ,moves[i][0], moves[j][0], node.Board )
+        node.add_child( deepcopy(child) )
+    del moves
+    del child
+    del new player
+    ##################################################
+    for each_node in node.children:
+        make_move(each_node.j_move_cordinate, each_node.i_move_cordinate, each_node.player.int, each_node.Board, each_node.player)
+        node.value = min_alpha_beta(each_node,each_node.Board,each_node.alpha,each_node.beta,level,depth+1)
+        node.beta = max(node.value ,node.alpha)
+        if node.alpha>=node.beta:
+            return node.beta
+    return node.alpha
 
 
 def Static_evaluation_function(AI_int, curr_board, pieces_left, curr_AI_turn):
