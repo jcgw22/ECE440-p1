@@ -284,7 +284,7 @@ def make_move(j, i, player_int, curr_board, Player_to_check = None):
     make_move_dir(j, i, 0, -1, flippable, player_int, curr_board)
     make_move_dir(j, i, 1, 1, flippable, player_int, curr_board)
     make_move_dir(j, i, -1, -1, flippable, player_int, curr_board)
-    make_move_dir(j, i, 1, -1, flint, curr_board)
+    make_move_dir(j, i, 1, -1, flippable, player_int, curr_board)
     make_move_dir(j, i, -1, 1, flippable, player_int, curr_board)
 
     # checks for an empty list
