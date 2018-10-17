@@ -15,10 +15,10 @@ class Player:
         color: the color of the player
         int : 
     """
+    playerCount = 0
+
     def __init__(self, is_ai):
         Player.playerCount += 1
-        self.playerScore = 2
-        self.pieces_not_taken = 60
         if Player.playerCount > 2:
             raise ValueError('Only 2 players can play')
 
@@ -31,12 +31,8 @@ class Player:
             self.color = 'black'
             self.int = -1
     
-    def update_score(self, board_to_check)
-        playerScore = np.count_nonzero(board_to_check == self.int)
-        
 
-
-class Node(object):
+class posibe_play(object):
     """
     Keeps track of all nessessary info for the tree
     Menbers:
@@ -52,21 +48,26 @@ class Node(object):
         i_move_cordinate: i cordinate of the move 
     """
     # init function (self, player ,j=None, i=None, Board = None, parent=None  )
-    def __init__(self, player ,j=None, i=None, Board = np.zeros((8, 8), dtype=np.int8), parent=None  ):
-        self.winning = 0 #p1 white= -1 and p2 black= 1
-        self.alpha =0
-        self.beta =0
-        self.value=0
-        self.children = []
-        self.parent = parent
+    def __init__(self, player_int, player_ai ,j=None, i=None, Board = np.zeros((8, 8), dtype=np.int8), playerScore=None,pieces_not_taken=None, parent=None  ):
+        self.playerScore = playerScore
+        self.pieces_not_taken = pieces_not_taken
         self.Board = Board
-        self.player = player
+        self.player_int = player_int
+        self.player_ai = player_ai
         self.j_move_cordinate = j
         self.i_move_cordinate = i
-        
+        self.possible_move_index = 0
+        self.possible_move = []
 
-    def add_child(self, obj):
-        self.children.append(obj)
+
+    def add_possible_move(self, obj):
+        self.possible_move.append(obj)
+
+    def delete_all_moves(self, obj):
+        self.possible_move = []
+
+    def update_score(self, board_to_check):
+        self.playerScore = np.count_nonzero(board_to_check == player_int)
 
 
 def initial_board_setup():
@@ -179,7 +180,14 @@ def ai_move():
         return
 
     # Set the move to the first in the list. (Later use minimax here).
+
     j, i = moves[0][0], moves[0][1]
+#    new_move = posibe_play(curr_p.int, curr_p.ai,0, 0, board)
+
+#    new_move = new_move.possible_move[new_move.possible_move_index]
+#    min_alpha_beta(new_move, board, 0, 0, 3, 0)
+#    print( new_move.possible_move.size)
+#    make_move(new_move.i_move_cordinate, new_move.i_move_cordinate , curr_p.int, board)
     make_move(j, i, curr_p.int, board)
     update_gui_and_ply()
 
@@ -297,7 +305,7 @@ def make_move(j, i, player_int, curr_board, Player_to_check = None):
     # add the new piece to the board
     curr_board[j][i] = player_int
     # update player score caount 
-    if not Player_to_check == None
+    if Player_to_check is not None:
         Player_to_check.pieces_not_taken -= 1
         Player_to_check.update_score(curr_board)
 
@@ -374,63 +382,54 @@ def print_winner():
         print("It was a tie: ",  p2_score, " to ", p1_score)
 
 
-def min_alpha_beta(node,board,alpha,beta,level,depth):
+def min_alpha_beta(Plays,board,alpha,beta,level,depth):
     if level == depth:
-        return Static_evaluation_function(node.player.int, node.Board, node.pieces_not_taken, node.player.ai)
-    if abs( find_winner(node.Board, node.player.int)) == 5 # if someone won
-        return find_winner(node.Board, AI_int)
-    if find_winner(node.Board, node.player.int) == 0 # if is a drawn
+        return Static_evaluation_function(Plays.player_int, board, Plays.pieces_not_taken, Plays.player_ai)
+    if abs(find_winner(board, Plays.player_int)) == 5:  # if someone won
+        return find_winner(board, AI_int)
+    if find_winner(board, Plays.player_int) == 0: # if is a drawn
         return 0
-    #calculate all the poible moves by the opponenct and add them to the node
-    moves = find_moves(node.player.int, node.Board)
-    new_player = deepcopy(node.player)
-    new_player.ai=not new_player.ai
-    new_player.int = new_player.int * -1
-    for i in range(0, (moves.size/2)-1)
-        child = Node( new_player ,moves[i][0], moves[j][0], node.Board )
-        node.add_child( deepcopy(child) )
+    # calculate all the poible moves by the opponenct and add them to the node
+    moves = find_moves(Plays.player_int, board)
+    for i in range(0, (moves.size/2)-1):
+        new_move = posibe_play(Plays.player_int * -1, not Plays.player_ai, moves[0][i], moves[1][i], deepcopy(board))
+        Plays.add_possible_move(deepcopy(new_move))
+        del new_move
     del moves
-    del child
-    del new player
     ##################################################
-    for each_node in node.children:
-        make_move(each_node.j_move_cordinate, each_node.i_move_cordinate, each_node.player.int, each_node.Board, each_node.player)
-        node.value = max_alpha_beta(each_node,each_node.Board,each_node.alpha,each_node.beta,level,depth+1)
-        node.beta = min(node.value ,node.alpha)
-        if node.beta<=node.alpha:
-            return node.alpha
-    return node.beta
-
-    
-
+    for each_play in Plays.possible_move:
+        make_move(each_play.j_move_cordinate, each_play.i_move_cordinate, player_int, each_play.Board, each_play)
+        value = max_alpha_beta(each_play, each_play.Board, alpha, beta, level, depth + 1)
+        beta = min(value, alpha)
+        Plays.possible_move_index = Plays.possible_move_index + 1
+        if beta <= alpha:
+            return alpha
+    return beta
 
 
-def max_alpha_beta(node,board,alpha,beta,level,depth):
+def max_alpha_beta(Plays, board, alpha, beta, level, depth):
     if level == depth:
-        return Static_evaluation_function(node.player.int, node.Board, node.pieces_not_taken, node.player.ai)
-    if abs( find_winner(node.Board, node.player.int)) == 5 # if someone won
-        return find_winner(node.Board, AI_int)
-    if find_winner(node.Board, node.player.int) == 0 # if is a drawn
+        return Static_evaluation_function(Plays.player_int, board, Plays.pieces_not_taken, Plays.player_ai)
+    if abs(find_winner(board, Plays.player_int)) == 5: # if someone won
+        return find_winner(board, AI_int)
+    if find_winner(board, Plays.player_int) == 0: # if is a drawn
         return 0
-    #calculate all the poible moves by the opponenct and add them to the node
-    moves = find_moves(node.player.int, node.Board)
-    new_player = deepcopy(node.player)
-    new_player.ai=not new_player.ai
-    new_player.int = new_player.int * -1
-    for i in range(0, (moves.size/2)-1)
-        child = Node( new_player ,moves[i][0], moves[j][0], node.Board )
-        node.add_child( deepcopy(child) )
+    # calculate all the poible moves by the opponenct and add them to the node
+    moves = find_moves(Plays.player_int, board)
+    for i in range(0, (moves.size/2)-1):
+        new_move = posibe_play(Plays.player_int * -1, not Plays.player_ai, moves[i][0], moves[i][1], deepcopy(board))
+        Plays.add_possible_move(deepcopy(new_move))
+        del new_move
     del moves
-    del child
-    del new player
     ##################################################
-    for each_node in node.children:
-        make_move(each_node.j_move_cordinate, each_node.i_move_cordinate, each_node.player.int, each_node.Board, each_node.player)
-        node.value = min_alpha_beta(each_node,each_node.Board,each_node.alpha,each_node.beta,level,depth+1)
-        node.beta = max(node.value ,node.alpha)
-        if node.alpha>=node.beta:
-            return node.beta
-    return node.alpha
+    for each_play in Plays.possible_move:
+        make_move(each_play.j_move_cordinate, each_play.i_move_cordinate, player_int, each_play.Board, each_play)
+        value = min_alpha_beta(each_play, each_play.Board, alpha, beta, level, depth + 1)
+        beta = max(value, alpha)
+        Plays.possible_move_index = Plays.possible_move_index + 1
+        if Plays.alpha >= beta:
+            return beta
+    return alpha
 
 
 def Static_evaluation_function(AI_int, curr_board, pieces_left, curr_AI_turn):
